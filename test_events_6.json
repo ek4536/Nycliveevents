@@ -1,0 +1,80 @@
+[
+    {
+      "title": "Web3 & Blockchain Summit",
+      "description": "Explore cryptocurrency, NFTs, and smart contracts",
+      "location": "Miami, FL",
+      "date": "2025-05-20",
+      "time": "10:00",
+      "source": "eventbrite",
+      "source_url": "https://eventbrite.com/web3-summit",
+      "source_id": "eventbrite_web3_miami",
+      "price": 249.99,
+      "image_url": null,
+      "tags": ["blockchain", "crypto", "web3", "conference"]
+    },
+    {
+      "title": "Mobile App Development Workshop",
+      "description": "Build iOS and Android apps with React Native",
+      "location": "Boston, MA",
+      "date": "2025-07-22",
+      "time": "13:00",
+      "source": "udemy",
+      "source_url": "https://udemy.com/react-native-mobile",
+      "source_id": "udemy_mobile_dev",
+      "price": 59.99,
+      "image_url": null,
+      "tags": ["mobile", "react-native", "ios", "android"]
+    },
+    {
+      "title": "AI & Machine Learning Intensive",
+      "description": "Deep learning, TensorFlow, and neural networks",
+      "location": "Silicon Valley, CA",
+      "date": "2025-09-10",
+      "time": "08:00",
+      "source": "coursera",
+      "source_url": "https://coursera.com/ai-intensive",
+      "source_id": "coursera_ai_ml_2025",
+      "price": 0,
+      "image_url": null,
+      "tags": ["ai", "machine-learning", "deep-learning", "tensorflow", "free"]
+    },
+    {
+      "title": "DevOps & Kubernetes Workshop",
+      "description": "Container orchestration, CI/CD pipelines, and cloud deployment",
+      "location": "Denver, CO",
+      "date": "2025-08-28",
+      "time": "09:00",
+      "source": "meetup",
+      "source_url": "https://meetup.com/devops-k8s",
+      "source_id": "meetup_devops_denver",
+      "price": 0,
+      "image_url": null,
+      "tags": ["devops", "kubernetes", "docker", "cicd", "free"]
+    },
+    {
+      "title": "Full Stack JavaScript Bootcamp",
+      "description": "Node.js, Express, MongoDB, and React from basics to advanced",
+      "location": "Portland, OR",
+      "date": "2025-10-15",
+      "time": "10:00",
+      "source": "pluralsight",
+      "source_url": "https://pluralsight.com/fullstack-js",
+      "source_id": "pluralsight_fullstack_js",
+      "price": 39.99,
+      "image_url": null,
+      "tags": ["javascript", "nodejs", "express", "mongodb", "react"]
+    },
+    {
+      "title": "Cybersecurity & Ethical Hacking Bootcamp",
+      "description": "Learn network security, penetration testing, and vulnerability assessment",
+      "location": "Washington, DC",
+      "date": "2025-11-05",
+      "time": "09:30",
+      "source": "eventbrite",
+      "source_url": "https://eventbrite.com/cybersecurity-bootcamp",
+      "source_id": "eventbrite_cyber_dc",
+      "price": 349.99,
+      "image_url": null,
+      "tags": ["cybersecurity", "hacking", "security", "networking", "conference"]
+    }
+]
