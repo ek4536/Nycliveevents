@@ -12,6 +12,9 @@ export interface Event {
   timestamp: Date;
   attendees?: number;
   price?: string;
+  address?: string;
+  lat?: number;
+  lng?: number;
 }
 
 const categories: EventCategory[] = ['Music', 'Arts & Theater', 'Food & Drink', 'Sports', 'Nightlife', 'Comedy', 'Community', 'Tech & Business', 'Fitness', 'Family'];

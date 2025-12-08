@@ -1,5 +1,5 @@
 import { Event } from '../utils/eventData';
-import { MapPin, Users, DollarSign, Clock } from 'lucide-react';
+import { MapPin, Clock } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Card } from './ui/card';
 
@@ -30,13 +30,12 @@ const categoryColors: Record<string, string> = {
 };
 
 export function EventCard({ event, isNew = false }: EventCardProps) {
-  const timeAgo = (date: Date) => {
-    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
-    if (seconds < 60) return `${seconds}s ago`;
-    const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `${minutes}m ago`;
-    const hours = Math.floor(minutes / 60);
-    return `${hours}h ago`;
+  const formatEventDateTime = (date: Date) => {
+    const month = date.toLocaleDateString('en-US', { month: 'short' });
+    const day = date.getDate();
+    const weekday = date.toLocaleDateString('en-US', { weekday: 'short' });
+    const time = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    return `${month} ${day} (${weekday}), ${time}`;
   };
 
   return (
@@ -61,25 +60,11 @@ export function EventCard({ event, isNew = false }: EventCardProps) {
             <MapPin className="w-3.5 h-3.5" />
             <span className="font-bold">{event.borough}</span>
           </div>
-
-          {event.attendees && (
-            <div className="flex items-center gap-1 text-sm text-[--text-secondary]">
-              <Users className="w-3.5 h-3.5" />
-              <span>{event.attendees}</span>
-            </div>
-          )}
-
-          {event.price && (
-            <div className="flex items-center gap-1 text-sm text-[--nyc-orange]">
-              <DollarSign className="w-3.5 h-3.5" />
-              <span className="font-bold">{event.price}</span>
-            </div>
-          )}
         </div>
 
         <div className="flex items-center gap-1 text-xs text-[--text-secondary]">
           <Clock className="w-3 h-3" />
-          <span>{timeAgo(event.timestamp)}</span>
+          <span>{formatEventDateTime(event.timestamp)}</span>
         </div>
       </div>
     </Card>

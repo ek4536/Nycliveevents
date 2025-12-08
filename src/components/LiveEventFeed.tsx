@@ -32,11 +32,13 @@ export function LiveEventFeed({ filter }: LiveEventFeedProps) {
     return () => clearInterval(interval);
   }, []);
 
-  const filteredEvents = events.filter(event => {
-    if (filter?.category && event.category !== filter.category) return false;
-    if (filter?.borough && event.borough !== filter.borough) return false;
-    return true;
-  });
+  const filteredEvents = events
+    .filter(event => {
+      if (filter?.category && event.category !== filter.category) return false;
+      if (filter?.borough && event.borough !== filter.borough) return false;
+      return true;
+    })
+    .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime()); // Sort by time (earliest first)
 
   return (
     <div className="space-y-4">
