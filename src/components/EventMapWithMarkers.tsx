@@ -33,8 +33,8 @@ const boroughCoordinates: Record<string, { lat: number; lng: number }> = {
   'Staten Island': { lat: 40.5795, lng: -74.1502 }
 };
 
-// ✅ Use environment variable for API key with proper fallback
-const GOOGLE_MAPS_API_KEY = import.meta?.env?.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyAu8BJDZBjZz2B64gkNLuw489QbzyObhD4';
+// ✅ [보안 수정 1] 하드코딩된 키 삭제. 오직 환경변수만 바라보게 설정
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
 export function EventMapWithMarkers({ events, selectedBorough, selectedDayOffset, onDayOffsetChange, onBoroughClick }: EventMapWithMarkersProps) {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -65,6 +65,7 @@ export function EventMapWithMarkers({ events, selectedBorough, selectedDayOffset
   // Load Google Maps Script
   useEffect(() => {
     const loadGoogleMapsScript = () => {
+      // 이미 로드되었으면 중단
       if (window.google && window.google.maps) {
         setIsMapLoaded(true);
         return;
@@ -72,6 +73,12 @@ export function EventMapWithMarkers({ events, selectedBorough, selectedDayOffset
 
       // ⚠️ Check if script is already loading (prevent duplicates)
       if (document.querySelector('script[src*="maps.googleapis.com"]')) {
+        return;
+      }
+
+      // ✅ [보안 수정 2] API 키가 없으면 스크립트 로드 중단 및 경고
+      if (!GOOGLE_MAPS_API_KEY) {
+        console.error("Google Maps API Key가 없습니다! .env 파일을 확인해주세요.");
         return;
       }
 
