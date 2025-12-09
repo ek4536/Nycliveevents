@@ -44,7 +44,6 @@ export function EventCard({ event, isNew = false }: EventCardProps) {
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1">
             <h3 className="text-[--text] font-bold">{event.title}</h3>
-            <p className="text-[--text-secondary] text-sm mt-1">{event.venue}</p>
           </div>
           <Badge className={sourceColors[event.source] || 'bg-gray-100 text-gray-700'} variant="outline">
             {event.source}

@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Event, BOROUGHS } from '../utils/eventData';
+import { Event, Borough, BOROUGHS } from '../utils/eventData';
 import { Activity } from 'lucide-react';
 
 interface ActivityHeatmapProps {
@@ -36,6 +36,35 @@ export function ActivityHeatmap({ events }: ActivityHeatmapProps) {
     
     return matrix;
   }, [events]);
+  
+  // Calculate sum counts for each time slot
+  const timeSlotTotals = useMemo(() => {
+    const totals: Record<string, number> = {
+      'Morning': 0,
+      'Afternoon': 0,
+      'Evening': 0,
+      'Night': 0
+    };
+    
+    Object.values(heatmapData).forEach(borough => {
+      Object.entries(borough).forEach(([slot, count]) => {
+        totals[slot] += count;
+      });
+    });
+    
+    return totals;
+  }, [heatmapData]);
+
+  // Calculate sum counts for each borough
+  const boroughTotals = useMemo(() => {
+    const totals: Record<string, number> = {};
+    
+    Object.entries(heatmapData).forEach(([borough, slots]) => {
+      totals[borough] = Object.values(slots).reduce((sum, count) => sum + count, 0);
+    });
+    
+    return totals;
+  }, [heatmapData]);
   
   const maxValue = useMemo(() => {
     let max = 0;
@@ -104,6 +133,7 @@ export function ActivityHeatmap({ events }: ActivityHeatmapProps) {
                   {slot}
                 </th>
               ))}
+              <th className="p-2 text-center text-xs text-[--nyc-orange] font-bold border-b">Total</th>
             </tr>
           </thead>
           <tbody>
@@ -129,8 +159,23 @@ export function ActivityHeatmap({ events }: ActivityHeatmapProps) {
                     </td>
                   );
                 })}
+                <td className="p-2 text-center border-b bg-[--nyc-orange]/10">
+                  <span className="text-sm font-bold text-[--nyc-orange]">{boroughTotals[borough]}</span>
+                </td>
               </tr>
             ))}
+            {/* Total Row */}
+            <tr className="bg-[--nyc-orange]/10">
+              <td className="p-2 text-sm text-[--nyc-orange] font-bold border-t-2">Total</td>
+              {TIME_SLOTS.map(slot => (
+                <td key={`total-${slot}`} className="p-2 text-center border-t-2">
+                  <span className="text-sm font-bold text-[--nyc-orange]">{timeSlotTotals[slot]}</span>
+                </td>
+              ))}
+              <td className="p-2 text-center border-t-2">
+                <span className="text-sm font-bold text-[--nyc-orange]">{events.length}</span>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>

@@ -1,7 +1,6 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Event } from '../utils/eventData';
-import { MapPin, ZoomIn, ZoomOut, Maximize2, Clock } from 'lucide-react';
-import { GoogleMap, LoadScript, Marker, InfoWindow } from '@react-google-maps/api';
+import { MapPin, Map } from 'lucide-react';
 
 interface EventMapWithMarkersProps {
   events: Event[];
@@ -13,151 +12,44 @@ interface EventMapWithMarkersProps {
 
 // Category colors matching the app theme
 const categoryColors: Record<string, string> = {
-  'Music': '#A8DADC',
-  'Arts & Theater': '#C5B4E3',
-  'Food & Drink': '#FF6F61',
-  'Sports': '#FF9F40',
-  'Nightlife': '#9D84B7',
-  'Comedy': '#FFB6B9',
-  'Community': '#98D8C8',
-  'Tech & Business': '#6C757D',
-  'Fitness': '#81C784',
-  'Family': '#FFD662'
+  'Music': '#74D2F2',
+  'Arts & Theater': '#80E9A1',
+  'Food & Drink': '#F2A059',
+  'Sports': '#F7EA37',
+  'Nightlife': '#B188F0',
+  'Comedy': '#FFB174',
+  'Community': '#6EE441',
+  'Tech & Business': '#F2D759',
+  'Fitness': '#8AAEF7',
+  'Family': '#8AAF99'
 };
 
-// Google Maps API Key - Replace with your actual key
-// Get your key at: https://console.cloud.google.com/google/maps-apis
-const GOOGLE_MAPS_API_KEY = 'AIzaSyAu8BJDZBjZz2B64gkNLuw489QbzyObhD4';
-
-// NYC center coordinates
-const nycCenter = {
-  lat: 40.7128,
-  lng: -74.0060
+// Borough coordinates for NYC
+const boroughCoordinates: Record<string, { lat: number; lng: number }> = {
+  'Manhattan': { lat: 40.7831, lng: -73.9712 },
+  'Brooklyn': { lat: 40.6782, lng: -73.9442 },
+  'Queens': { lat: 40.7282, lng: -73.7949 },
+  'Bronx': { lat: 40.8448, lng: -73.8648 },
+  'Staten Island': { lat: 40.5795, lng: -74.1502 }
 };
 
-const mapContainerStyle = {
-  width: '100%',
-  height: '100%'
-};
-
-const mapOptions = {
-  disableDefaultUI: false,
-  zoomControl: true,
-  streetViewControl: false,
-  mapTypeControl: false,
-  fullscreenControl: false,
-  styles: [
-    {
-      featureType: 'poi',
-      elementType: 'labels',
-      stylers: [{ visibility: 'off' }]
-    }
-  ]
-};
+// ✅ Use environment variable for API key with proper fallback
+const GOOGLE_MAPS_API_KEY = import.meta?.env?.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyAu8BJDZBjZz2B64gkNLuw489QbzyObhD4';
 
 export function EventMapWithMarkers({ events, selectedBorough, selectedDayOffset, onDayOffsetChange, onBoroughClick }: EventMapWithMarkersProps) {
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
-  const [map, setMap] = useState<google.maps.Map | null>(null);
-  const [zoom, setZoom] = useState(11);
+  const mapRef = useRef<HTMLDivElement>(null);
+  const googleMapRef = useRef<google.maps.Map | null>(null);
+  const markersRef = useRef<google.maps.Marker[]>([]);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
 
-  // Filter events that have coordinates
-  const eventsWithCoords = useMemo(() => {
-    return events.filter(event => event.lat && event.lng);
-  }, [events]);
-
-  // Group nearby events to prevent marker overlap
-  const groupedEvents = useMemo(() => {
-    const groups: { events: Event[]; lat: number; lng: number }[] = [];
-    const threshold = 0.002; // Distance threshold for grouping
-
-    eventsWithCoords.forEach(event => {
-      if (!event.lat || !event.lng) return;
-
-      // Find existing group nearby
-      const nearbyGroup = groups.find(group => {
-        const distance = Math.sqrt(
-          Math.pow(group.lat - event.lat!, 2) + Math.pow(group.lng - event.lng!, 2)
-        );
-        return distance < threshold;
-      });
-
-      if (nearbyGroup) {
-        nearbyGroup.events.push(event);
-      } else {
-        groups.push({
-          events: [event],
-          lat: event.lat,
-          lng: event.lng
-        });
-      }
+  // Calculate category counts
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    events.forEach(event => {
+      counts[event.category] = (counts[event.category] || 0) + 1;
     });
-
-    return groups;
-  }, [eventsWithCoords]);
-
-  // Zoom controls
-  const handleZoomIn = () => {
-    if (map) {
-      const currentZoom = map.getZoom() || 11;
-      map.setZoom(currentZoom + 1);
-      setZoom(currentZoom + 1);
-    }
-  };
-
-  const handleZoomOut = () => {
-    if (map) {
-      const currentZoom = map.getZoom() || 11;
-      map.setZoom(currentZoom - 1);
-      setZoom(currentZoom - 1);
-    }
-  };
-
-  const handleResetZoom = () => {
-    if (map) {
-      map.setCenter(nycCenter);
-      map.setZoom(11);
-      setZoom(11);
-    }
-  };
-
-  const onLoad = useCallback((map: google.maps.Map) => {
-    setMap(map);
-    setIsMapLoaded(true);
-  }, []);
-
-  const onZoomChanged = () => {
-    if (map) {
-      const currentZoom = map.getZoom() || 11;
-      setZoom(currentZoom);
-    }
-  };
-
-  // Create custom marker icon with category color
-  const createMarkerIcon = useCallback((color: string, count?: number) => {
-    if (!isMapLoaded || typeof google === 'undefined') return undefined;
-    
-    const svg = `
-      <svg width="32" height="42" viewBox="0 0 32 42" xmlns="http://www.w3.org/2000/svg">
-        <g filter="url(#shadow)">
-          <circle cx="16" cy="16" r="14" fill="${color}" stroke="white" stroke-width="3"/>
-          <path d="M16 30 L11 20 L21 20 Z" fill="${color}"/>
-        </g>
-        <defs>
-          <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
-            <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.3"/>
-          </filter>
-        </defs>
-        ${count ? `<text x="16" y="21" text-anchor="middle" font-size="10" font-weight="bold" fill="white">${count}</text>` : ''}
-      </svg>
-    `;
-    
-    return {
-      url: `data:image/svg+xml;base64,${btoa(svg)}`,
-      scaledSize: new google.maps.Size(24, 32),
-      anchor: new google.maps.Point(12, 32)
-    };
-  }, [isMapLoaded]);
+    return counts;
+  }, [events]);
 
   // Format date for display
   const formatDate = (offset: number) => {
@@ -170,39 +62,128 @@ export function EventMapWithMarkers({ events, selectedBorough, selectedDayOffset
     return `${month} ${day} (${weekday}), ${year}`;
   };
 
+  // Load Google Maps Script
+  useEffect(() => {
+    const loadGoogleMapsScript = () => {
+      if (window.google && window.google.maps) {
+        setIsMapLoaded(true);
+        return;
+      }
+
+      // ⚠️ Check if script is already loading (prevent duplicates)
+      if (document.querySelector('script[src*="maps.googleapis.com"]')) {
+        return;
+      }
+
+      const script = document.createElement('script');
+      // ✅ Use environment variable with places library
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`;
+      script.async = true;
+      script.defer = true;
+      script.onload = () => {
+        console.log('Google Maps loaded successfully');
+        setIsMapLoaded(true);
+      };
+      script.onerror = (error) => {
+        console.error('Failed to load Google Maps:', error);
+      };
+      document.head.appendChild(script);
+    };
+
+    loadGoogleMapsScript();
+  }, []);
+
+  // Initialize Google Map
+  useEffect(() => {
+    if (!isMapLoaded || !mapRef.current || googleMapRef.current) return;
+
+    const map = new google.maps.Map(mapRef.current, {
+      center: { lat: 40.7128, lng: -73.9060 }, // NYC center
+      zoom: 11,
+      mapTypeControl: false,
+      streetViewControl: false,
+      fullscreenControl: false,
+      styles: [
+        {
+          featureType: 'poi',
+          elementType: 'labels',
+          stylers: [{ visibility: 'off' }]
+        }
+      ]
+    });
+
+    googleMapRef.current = map;
+  }, [isMapLoaded]);
+
+  // Update markers when events change
+  useEffect(() => {
+    if (!googleMapRef.current) return;
+
+    // Clear existing markers
+    markersRef.current.forEach(marker => marker.setMap(null));
+    markersRef.current = [];
+
+    // Add new markers for each event
+    events.forEach(event => {
+      // Use event's lat/lng if available, otherwise use borough coordinates with random offset
+      let lat: number;
+      let lng: number;
+      
+      if (event.lat && event.lng) {
+        lat = event.lat;
+        lng = event.lng;
+      } else {
+        const baseCoords = boroughCoordinates[event.borough];
+        lat = baseCoords.lat + (Math.random() - 0.5) * 0.1;
+        lng = baseCoords.lng + (Math.random() - 0.5) * 0.1;
+      }
+
+      const marker = new google.maps.Marker({
+        position: { lat, lng },
+        map: googleMapRef.current,
+        title: event.title,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 8,
+          fillColor: categoryColors[event.category] || '#999',
+          fillOpacity: 0.8,
+          strokeColor: '#ffffff',
+          strokeWeight: 2
+        }
+      });
+
+      // Add info window
+      const infoWindow = new google.maps.InfoWindow({
+        content: `
+          <div style="padding: 8px; max-width: 200px;">
+            <h4 style="margin: 0 0 4px 0; font-weight: bold; color: #004953;">${event.title}</h4>
+            <p style="margin: 4px 0; font-size: 12px; color: #666;">
+              <strong>Category:</strong> ${event.category}<br/>
+              <strong>Borough:</strong> ${event.borough}<br/>
+              <strong>Time:</strong> ${event.timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+            </p>
+          </div>
+        `
+      });
+
+      marker.addListener('click', () => {
+        infoWindow.open(googleMapRef.current, marker);
+      });
+
+      markersRef.current.push(marker);
+    });
+  }, [events]);
+
+  const totalEvents = events.length;
+
   return (
     <div className="bg-card border rounded-lg overflow-hidden h-full">
       <div className="flex items-center gap-2 p-4 border-b bg-muted">
-        <MapPin className="w-5 h-5 text-foreground" />
+        <Map className="w-5 h-5 text-foreground" />
         <h3 className="text-foreground font-bold">NYC Event Map</h3>
         <span className="ml-auto text-xs text-[--text-secondary] font-bold">
-          {eventsWithCoords.length} events with locations
+          {totalEvents} total events
         </span>
-        
-        {/* Zoom Controls */}
-        <div className="flex items-center gap-1 ml-2 border-l pl-2">
-          <button
-            onClick={handleZoomIn}
-            className="p-1.5 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
-            title="Zoom In"
-          >
-            <ZoomIn className="w-4 h-4 text-foreground" />
-          </button>
-          <button
-            onClick={handleZoomOut}
-            className="p-1.5 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
-            title="Zoom Out"
-          >
-            <ZoomOut className="w-4 h-4 text-foreground" />
-          </button>
-          <button
-            onClick={handleResetZoom}
-            className="p-1.5 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
-            title="Reset View"
-          >
-            <Maximize2 className="w-4 h-4 text-foreground" />
-          </button>
-        </div>
       </div>
 
       {/* Date Slider */}
@@ -224,106 +205,35 @@ export function EventMapWithMarkers({ events, selectedBorough, selectedDayOffset
         </div>
       </div>
       
-      <div className="relative w-full h-[400px] lg:h-[500px] bg-[--nyc-gray]">
-        {GOOGLE_MAPS_API_KEY === 'YOUR_GOOGLE_MAPS_API_KEY' ? (
-          <div className="flex items-center justify-center h-full bg-gray-100 p-8">
-            <div className="text-center max-w-md">
-              <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="font-bold text-foreground mb-2">Google Maps API Key Required</h3>
-              <p className="text-sm text-[--text-secondary] mb-4">
-                To view the interactive map, you need to add a Google Maps API key.
-              </p>
-              <ol className="text-xs text-left text-[--text-secondary] space-y-2 bg-white p-4 rounded border">
-                <li className="font-bold">1. Visit Google Cloud Console</li>
-                <li>2. Enable "Maps JavaScript API"</li>
-                <li>3. Create an API key</li>
-                <li>4. Replace GOOGLE_MAPS_API_KEY in EventMapWithMarkers.tsx</li>
-              </ol>
-              <a 
-                href="https://console.cloud.google.com/google/maps-apis" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="inline-block mt-4 text-xs text-[--nyc-orange] hover:underline font-bold"
-              >
-                Get API Key →
-              </a>
-            </div>
+      {/* Google Map */}
+      <div 
+        ref={mapRef}
+        className="w-full h-[500px] bg-gray-100"
+        style={{ minHeight: '500px' }}
+      >
+        {!isMapLoaded && (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-[--text-secondary]">Loading map...</p>
           </div>
-        ) : (
-          <LoadScript googleMapsApiKey={GOOGLE_MAPS_API_KEY}>
-            <GoogleMap
-              mapContainerStyle={mapContainerStyle}
-              center={nycCenter}
-              zoom={11}
-              options={mapOptions}
-              onLoad={onLoad}
-              onZoomChanged={onZoomChanged}
-            >
-              {/* Event Markers */}
-              {isMapLoaded && groupedEvents.map((group, idx) => {
-                const event = group.events[0];
-                const markerColor = categoryColors[event.category] || '#6C757D';
-                const isMultiple = group.events.length > 1;
-                const icon = createMarkerIcon(markerColor, isMultiple ? group.events.length : undefined);
-
-                return (
-                  <Marker
-                    key={`marker-${idx}`}
-                    position={{ lat: group.lat, lng: group.lng }}
-                    icon={icon}
-                    onClick={() => setSelectedEvent(event)}
-                  />
-                );
-              })}
-
-              {/* Info Window */}
-              {selectedEvent && selectedEvent.lat && selectedEvent.lng && (
-                <InfoWindow
-                  position={{ lat: selectedEvent.lat, lng: selectedEvent.lng }}
-                  onCloseClick={() => setSelectedEvent(null)}
-                >
-                  <div className="p-2 max-w-[250px]">
-                    <p className="font-bold text-foreground mb-1">{selectedEvent.title}</p>
-                    <p className="text-xs text-[--text-secondary] mb-1">{selectedEvent.address}</p>
-                    <p className="text-xs text-[--text-secondary]">
-                      {selectedEvent.timestamp.toLocaleTimeString('en-US', { 
-                        hour: 'numeric', 
-                        minute: '2-digit' 
-                      })}
-                    </p>
-                  </div>
-                </InfoWindow>
-              )}
-            </GoogleMap>
-          </LoadScript>
         )}
       </div>
 
-      {/* Legend */}
-      <div className="p-4 border-t bg-card space-y-3">
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-[--text-secondary]">
-            <span className="font-bold">Event Locations Across NYC • Zoom: {zoom}</span>
-          </p>
-          <button
-            onClick={() => onBoroughClick('all')}
-            className="text-xs text-[--nyc-orange] hover:underline font-bold"
-          >
-            Reset View
-          </button>
-        </div>
-        
-        {/* Category Legend */}
-        <div className="flex flex-wrap gap-2">
-          {Object.entries(categoryColors).map(([category, color]) => (
-            <div key={category} className="flex items-center gap-1">
-              <div
-                className="w-3 h-3 rounded-full"
-                style={{ backgroundColor: color }}
-              />
-              <span className="text-xs text-[--text-secondary]">{category}</span>
-            </div>
-          ))}
+      {/* Category Legend with Counts */}
+      <div className="p-4 bg-card border-t">
+        <div className="flex flex-wrap gap-3">
+          {Object.entries(categoryColors).map(([category, color]) => {
+            const count = categoryCounts[category] || 0;
+            return (
+              <div key={category} className="flex items-center gap-1.5">
+                <div
+                  className="w-3 h-3 rounded-full border border-white shadow-sm"
+                  style={{ backgroundColor: color }}
+                />
+                <span className="text-xs text-[--text-secondary]">{category}</span>
+                <span className="text-xs font-bold text-[--nyc-orange]">({count})</span>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

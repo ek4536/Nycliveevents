@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Event, generateRandomEvent } from '../utils/eventData';
+import { Event, SAMPLE_EVENTS } from '../utils/eventData';
 import { EventCard } from './EventCard';
 import { Activity } from 'lucide-react';
 
@@ -13,24 +13,27 @@ interface LiveEventFeedProps {
 export function LiveEventFeed({ filter }: LiveEventFeedProps) {
   const [events, setEvents] = useState<Event[]>([]);
   const [newEventId, setNewEventId] = useState<string | null>(null);
+  const [eventIndex, setEventIndex] = useState(0);
 
   useEffect(() => {
-    // Generate initial events
-    const initialEvents = Array.from({ length: 10 }, () => generateRandomEvent());
+    // Get initial events from sample data
+    const initialEvents = SAMPLE_EVENTS.slice(0, 10);
     setEvents(initialEvents);
+    setEventIndex(10);
 
-    // Simulate real-time event stream
+    // Simulate real-time event stream by cycling through sample events
     const interval = setInterval(() => {
-      const newEvent = generateRandomEvent();
-      setEvents(prev => [newEvent, ...prev].slice(0, 50)); // Keep last 50 events
-      setNewEventId(newEvent.id);
+      const nextEvent = SAMPLE_EVENTS[eventIndex % SAMPLE_EVENTS.length];
+      setEvents(prev => [nextEvent, ...prev].slice(0, 50)); // Keep last 50 events
+      setNewEventId(nextEvent.id);
+      setEventIndex(prev => prev + 1);
       
       // Remove highlight after animation
       setTimeout(() => setNewEventId(null), 3000);
     }, 3000); // New event every 3 seconds
 
     return () => clearInterval(interval);
-  }, []);
+  }, [eventIndex]);
 
   const filteredEvents = events
     .filter(event => {

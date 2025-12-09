@@ -1,23 +1,17 @@
 import { useState, useEffect } from 'react';
-import { Event, generateHistoricalData, EventCategory, Borough } from './utils/eventData';
-import { loadEventsFromJSON, mergeEventsData } from './utils/dataLoader';
+import { Event, SAMPLE_EVENTS, EventCategory, Borough, CATEGORIES, BOROUGHS } from './utils/eventData';
 import { loadEventsWithAPIFallback } from './utils/apiLoader';
 import { LiveEventFeed } from './components/LiveEventFeed';
 import { TrendsChart } from './components/TrendsChart';
-import { FilterPanel } from './components/FilterPanel';
 import { Logo } from './components/Logo';
 import { EventMapWithMarkers } from './components/EventMapWithMarkers';
 import { TimeOfDayAnalytics } from './components/TimeOfDayAnalytics';
-import { VenuePopularity } from './components/VenuePopularity';
 import { ActivityHeatmap } from './components/ActivityHeatmap';
 
 import { Radio, TrendingUp, Calendar, Loader2, BarChart3 } from 'lucide-react';
 
-const categories: EventCategory[] = ['Music', 'Arts & Theater', 'Food & Drink', 'Sports', 'Nightlife', 'Comedy', 'Community', 'Tech & Business', 'Fitness', 'Family'];
-const boroughs: Borough[] = ['Manhattan', 'Brooklyn', 'Queens', 'Bronx', 'Staten Island'];
-
 export default function App() {
-  const [historicalEvents, setHistoricalEvents] = useState<Event[]>([]);
+  const [historicalEvents, setHistoricalEvents] = useState<Event[]>(SAMPLE_EVENTS);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedBoroughs, setSelectedBoroughs] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(() => {
@@ -32,22 +26,21 @@ export default function App() {
     async function loadData() {
       setIsLoading(true);
       try {
-        // Load events from API endpoint
+        // Try to load events from API endpoint
         const apiEvents = await loadEventsWithAPIFallback();
         
-        // Generate historical data for analytics if API returns insufficient data
-        const generatedEvents = apiEvents.length > 0 ? [] : generateHistoricalData(24);
-        
-        // Merge both datasets
-        const allEvents = apiEvents.length > 0 ? apiEvents : mergeEventsData([], generatedEvents);
+        // Use API events if available, otherwise use sample data
+        const allEvents = apiEvents.length > 0 ? apiEvents : SAMPLE_EVENTS;
         
         setHistoricalEvents(allEvents);
-        console.log(`Loaded ${allEvents.length} total events`);
+        
+        // Only log when using API data successfully
+        if (apiEvents.length > 0) {
+          console.log(`✅ Loaded ${allEvents.length} events from API`);
+        }
       } catch (error) {
-        console.error('Failed to load events:', error);
-        // Fallback to generated data only
-        const generatedEvents = generateHistoricalData(24);
-        setHistoricalEvents(generatedEvents);
+        // Silently fallback to sample data
+        setHistoricalEvents(SAMPLE_EVENTS);
       } finally {
         setIsLoading(false);
       }
@@ -122,7 +115,7 @@ export default function App() {
           <div className="text-center">
             <Loader2 className="w-12 h-12 text-[--nyc-orange] animate-spin mx-auto mb-4" />
             <p className="text-foreground font-bold">Loading NYC Events Data...</p>
-            <p className="text-sm text-[--text-secondary] mt-2">Fetching from GitHub repository</p>
+            <p className="text-sm text-[--text-secondary] mt-2">Connecting to API endpoint</p>
           </div>
         </div>
       )}
@@ -174,7 +167,7 @@ export default function App() {
                     Categories {selectedCategories.length > 0 && `(${selectedCategories.length})`}
                   </label>
                   <div className="bg-white rounded-lg p-3 border-2 border-gray-200 max-h-[200px] overflow-y-auto space-y-2">
-                    {categories.map(category => (
+                    {CATEGORIES.map(category => (
                       <label key={category} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 rounded px-2 py-1">
                         <input
                           type="checkbox"
@@ -194,7 +187,7 @@ export default function App() {
                     Boroughs {selectedBoroughs.length > 0 && `(${selectedBoroughs.length})`}
                   </label>
                   <div className="bg-white rounded-lg p-3 border-2 border-gray-200 space-y-2">
-                    {boroughs.map(borough => (
+                    {BOROUGHS.map(borough => (
                       <label key={borough} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 rounded px-2 py-1">
                         <input
                           type="checkbox"
@@ -324,10 +317,9 @@ export default function App() {
             </div>
           </div>
 
-          {/* Analytics Grid - 3 columns */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
+          {/* Analytics Grid - 2 columns */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
             <TimeOfDayAnalytics events={filteredHistoricalEvents} />
-            <VenuePopularity events={filteredHistoricalEvents} />
             <ActivityHeatmap events={filteredHistoricalEvents} />
           </div>
         </main>
@@ -336,8 +328,7 @@ export default function App() {
       {/* Footer */}
       <footer className="bg-card border-t mt-12 py-6">
         <div className="px-4 text-center text-sm text-[--text-secondary]">
-          <p className="font-bold">Data aggregated from Instagram, Eventbrite, Ticketmaster, Meetup & Facebook Events</p>
-          <p className="mt-1">Live pipeline for continuous data ingestion & analysis</p>
+          <p className="font-bold">Data aggregated from Eventbrite, Meetup, NYC Parks and NYC Permitted events information</p>
         </div>
       </footer>
     </div>
